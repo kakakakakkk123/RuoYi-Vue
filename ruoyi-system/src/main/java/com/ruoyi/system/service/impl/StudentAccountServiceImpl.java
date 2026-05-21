@@ -1,11 +1,16 @@
 package com.ruoyi.system.service.impl;
 
 import java.util.List;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import com.ruoyi.common.constant.UserConstants;
 import com.ruoyi.common.core.domain.entity.SysRole;
 import com.ruoyi.common.core.domain.entity.SysUser;
@@ -31,8 +36,10 @@ import com.ruoyi.system.service.IStudentAccountService;
 @Service
 public class StudentAccountServiceImpl implements IStudentAccountService
 {
+    private static final Logger log = LoggerFactory.getLogger(StudentAccountServiceImpl.class);
     private static final String STUDENT_ROLE_KEY = "student";
     private static final String REGISTER_CONFIG_KEY = "sys.account.registerUser";
+    private static final String INIT_PASSWORD_KEY = "sys.user.initPassword";
     private static final Long STUDENT_DEFAULT_DEPT_ID = 103L;
 
     @Autowired
@@ -227,6 +234,18 @@ public class StudentAccountServiceImpl implements IStudentAccountService
     }
 
     @Override
+    @Transactional
+    public int resetStudentPasswords(Long[] userIds, String password)
+    {
+        int count = 0;
+        for (Long userId : userIds)
+        {
+            count += resetStudentPassword(userId, password);
+        }
+        return count;
+    }
+
+    @Override
     public int changeStudentStatus(Long userId, String status)
     {
         ensureStudentUser(userId);
@@ -234,6 +253,18 @@ public class StudentAccountServiceImpl implements IStudentAccountService
         user.setUserId(userId);
         user.setStatus(status);
         return userService.updateUserStatus(user);
+    }
+
+    @Override
+    @Transactional
+    public int changeStudentStatuses(Long[] userIds, String status)
+    {
+        int count = 0;
+        for (Long userId : userIds)
+        {
+            count += changeStudentStatus(userId, status);
+        }
+        return count;
     }
 
     @Override
@@ -267,6 +298,152 @@ public class StudentAccountServiceImpl implements IStudentAccountService
         target.setConfigValue(Boolean.toString(enabled));
         target.setUpdateBy(operName);
         return configService.updateConfig(target) > 0;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String importStudentUsers(List<SysUser> userList, Boolean isUpdateSupport, Boolean disableMissing, String operName)
+    {
+        if (StringUtils.isNull(userList) || userList.size() == 0)
+        {
+            throw new ServiceException("导入学生数据不能为空");
+        }
+
+        SysRole studentRole = selectStudentRole();
+        if (StringUtils.isNull(studentRole))
+        {
+            throw new ServiceException("系统缺少学生角色（role_key=student）");
+        }
+
+        Set<String> importedUserNames = new HashSet<>();
+        int successNum = 0;
+        int failureNum = 0;
+        StringBuilder successMsg = new StringBuilder();
+        StringBuilder failureMsg = new StringBuilder();
+
+        for (SysUser user : userList)
+        {
+            try
+            {
+                user.setDeptId(StringUtils.isNull(user.getDeptId()) || user.getDeptId() == 0 ? STUDENT_DEFAULT_DEPT_ID : user.getDeptId());
+                if (StringUtils.isEmpty(user.getUserName()) || StringUtils.isEmpty(user.getStudentNo()) || StringUtils.isEmpty(user.getNickName()))
+                {
+                    throw new ServiceException("账号、学号、昵称不能为空");
+                }
+                importedUserNames.add(user.getUserName());
+
+                SysUser exist = userService.selectUserByUserName(user.getUserName());
+                if (StringUtils.isNull(exist))
+                {
+                    if (!userService.checkStudentNoUnique(user))
+                    {
+                        throw new ServiceException("学号已存在");
+                    }
+                    if (StringUtils.isNotEmpty(user.getEmail()) && !userService.checkEmailUnique(user))
+                    {
+                        throw new ServiceException("邮箱已存在");
+                    }
+                    user.setRoleIds(new Long[] { studentRole.getRoleId() });
+                    user.setPassword(SecurityUtils.encryptPassword(configService.selectConfigByKey(INIT_PASSWORD_KEY)));
+                    user.setStatus(UserConstants.NORMAL);
+                    user.setCreateBy(operName);
+                    user.setCreateTime(DateUtils.getNowDate());
+                    user.setPwdUpdateDate(DateUtils.getNowDate());
+                    userService.insertUser(user);
+                    ensureStudentProfile(user.getUserId(), operName);
+                    successNum++;
+                    successMsg.append("<br/>").append(successNum).append("、账号").append(user.getUserName()).append(" 导入成功");
+                }
+                else if (isUpdateSupport)
+                {
+                    user.setUserId(exist.getUserId());
+                    user.setDeptId(exist.getDeptId());
+                    user.setStatus(exist.getStatus());
+                    user.setUpdateBy(operName);
+                    user.setRoleIds(new Long[] { studentRole.getRoleId() });
+                    userService.checkUserAllowed(exist);
+                    userService.checkUserDataScope(exist.getUserId());
+                    if (!StringUtils.equals(exist.getStudentNo(), user.getStudentNo()) && !userService.checkStudentNoUnique(user))
+                    {
+                        throw new ServiceException("学号已存在");
+                    }
+                    if (StringUtils.isNotEmpty(user.getEmail()) && !StringUtils.equals(exist.getEmail(), user.getEmail()) && !userService.checkEmailUnique(user))
+                    {
+                        throw new ServiceException("邮箱已存在");
+                    }
+                    userService.updateUser(user);
+                    ensureStudentProfile(user.getUserId(), operName);
+                    successNum++;
+                    successMsg.append("<br/>").append(successNum).append("、账号").append(user.getUserName()).append(" 更新成功");
+                }
+                else
+                {
+                    failureNum++;
+                    failureMsg.append("<br/>").append(failureNum).append("、账号").append(user.getUserName()).append(" 已存在");
+                }
+            }
+            catch (Exception e)
+            {
+                failureNum++;
+                String msg = "<br/>" + failureNum + "、账号" + user.getUserName() + " 导入失败：";
+                failureMsg.append(msg).append(e.getMessage());
+                log.error(msg, e);
+            }
+        }
+
+        List<SysUser> allStudents = accountMapper.selectStudentList(new SysUser());
+        List<String> missingStudents = allStudents.stream()
+                .map(SysUser::getUserName)
+                .filter(name -> !importedUserNames.contains(name))
+                .collect(Collectors.toList());
+        if (Boolean.TRUE.equals(disableMissing) && !CollectionUtils.isEmpty(missingStudents))
+        {
+            for (String userName : missingStudents)
+            {
+                SysUser user = userService.selectUserByUserName(userName);
+                if (StringUtils.isNotNull(user))
+                {
+                    SysUser statusUser = new SysUser();
+                    statusUser.setUserId(user.getUserId());
+                    statusUser.setStatus(UserConstants.USER_DISABLE);
+                    userService.updateUserStatus(statusUser);
+                }
+            }
+        }
+
+        String missingText = CollectionUtils.isEmpty(missingStudents) ? "" : ("；名单外账号：" + String.join("、", missingStudents));
+        if (failureNum > 0)
+        {
+            failureMsg.insert(0, "很抱歉，导入失败！共 " + failureNum + " 条数据格式不正确，错误如下：");
+            throw new ServiceException(failureMsg.toString() + missingText);
+        }
+
+        successMsg.insert(0, "恭喜您，数据已全部导入成功！共" + successNum + " 条，数据如下：");
+        if (!StringUtils.isEmpty(missingText))
+        {
+            successMsg.append("<br/>").append("提示：").append(missingText);
+            if (Boolean.TRUE.equals(disableMissing))
+            {
+                successMsg.append("，已自动停用名单外账号");
+            }
+        }
+        return successMsg.toString();
+    }
+
+    private StudentProfile buildEmptyProfile(Long userId, String operName)
+    {
+        StudentProfile profile = new StudentProfile();
+        profile.setUserId(userId);
+        profile.setCreateBy(operName);
+        return profile;
+    }
+
+    private void ensureStudentProfile(Long userId, String operName)
+    {
+        if (StringUtils.isNull(accountMapper.selectStudentProfileByUserId(userId)))
+        {
+            accountMapper.insertStudentProfile(buildEmptyProfile(userId, operName));
+        }
     }
 
     private SysRole selectStudentRole()

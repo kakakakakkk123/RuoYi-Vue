@@ -20,6 +20,21 @@
 
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
+        <el-button type="primary" plain icon="el-icon-upload2" size="mini" @click="handleImport">导入名单</el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button type="success" plain size="mini" :disabled="multiple" @click="handleBatchEnable">批量启用</el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button type="warning" plain size="mini" :disabled="multiple" @click="handleBatchDisable">批量停用</el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button type="info" plain size="mini" :disabled="multiple" @click="handleBatchResetPwd">批量重置密码</el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button type="danger" plain size="mini" :disabled="multiple" @click="handleBatchDelete">批量删除</el-button>
+      </el-col>
+      <el-col :span="1.5">
         <el-button type="warning" plain size="mini" @click="refreshRegisterEnabled">刷新注册开关</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -51,15 +66,29 @@
     </el-table>
 
     <pagination v-show="total > 0" :total="total" :page.sync="queryParams.pageNum" :limit.sync="queryParams.pageSize" @pagination="getList" />
+
+    <excel-import-dialog
+      ref="importStudentRef"
+      title="学生名单导入"
+      action="/account/students/importData"
+      template-action="/account/students/importTemplate"
+      template-file-name="student_template"
+      update-support-label="是否更新已经存在的学生数据"
+      extra-support-label="导入后停用名单外学生"
+      extra-support-param="disableMissing"
+      @success="handleImportSuccess"
+    />
   </div>
 </template>
 
 <script>
-import { listStudents, resetStudentPassword, changeStudentStatus, deleteStudents, getRegisterEnabled, setRegisterEnabled } from "@/api/account"
+import { listStudents, resetStudentPassword, resetStudentPasswords, changeStudentStatus, changeStudentStatuses, deleteStudents, getRegisterEnabled, setRegisterEnabled } from "@/api/account"
+import ExcelImportDialog from "@/components/ExcelImportDialog"
 
 export default {
   name: "StudentAccount",
   dicts: ["sys_normal_disable"],
+  components: { ExcelImportDialog },
   data() {
     return {
       loading: false,
@@ -67,6 +96,7 @@ export default {
       total: 0,
       studentList: [],
       ids: [],
+      selectedRows: [],
       registerEnabled: false,
       queryParams: {
         pageNum: 1,
@@ -75,6 +105,11 @@ export default {
         studentNo: undefined,
         status: undefined
       }
+    }
+  },
+  computed: {
+    multiple() {
+      return this.ids.length === 0
     }
   },
   created() {
@@ -100,6 +135,7 @@ export default {
       this.handleQuery()
     },
     handleSelectionChange(selection) {
+      this.selectedRows = selection
       this.ids = selection.map(i => i.userId)
     },
     handleResetPwd(row) {
@@ -120,11 +156,46 @@ export default {
       })
     },
     handleDelete(row) {
-      const userIds = row.userId || this.ids
+      const userIds = row.userId ? [row.userId] : this.ids
       this.$modal.confirm(`确认删除学号为 ${row.studentNo} 的学生吗？`).then(() => deleteStudents(userIds)).then(() => {
         this.getList()
         this.$modal.msgSuccess("删除成功")
       }).catch(() => {})
+    },
+    handleBatchResetPwd() {
+      this.$prompt(`请输入所选 ${this.ids.length} 个学生的新密码`, "批量重置密码", { closeOnClickModal: false }).then(({ value }) => {
+        resetStudentPasswords(this.ids, value).then(() => {
+          this.$modal.msgSuccess("批量重置成功")
+        })
+      }).catch(() => {})
+    },
+    handleBatchEnable() {
+      this.$modal.confirm(`确认批量启用所选 ${this.ids.length} 个学生吗？`).then(() => {
+        return changeStudentStatuses(this.ids, "0")
+      }).then(() => {
+        this.$modal.msgSuccess("批量启用成功")
+        this.getList()
+      }).catch(() => {})
+    },
+    handleBatchDisable() {
+      this.$modal.confirm(`确认批量停用所选 ${this.ids.length} 个学生吗？`).then(() => {
+        return changeStudentStatuses(this.ids, "1")
+      }).then(() => {
+        this.$modal.msgSuccess("批量停用成功")
+        this.getList()
+      }).catch(() => {})
+    },
+    handleBatchDelete() {
+      this.$modal.confirm(`确认删除所选 ${this.ids.length} 个学生吗？`).then(() => deleteStudents(this.ids)).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("批量删除成功")
+      }).catch(() => {})
+    },
+    handleImport() {
+      this.$refs.importStudentRef.open()
+    },
+    handleImportSuccess() {
+      this.getList()
     },
     refreshRegisterEnabled() {
       getRegisterEnabled().then(res => {

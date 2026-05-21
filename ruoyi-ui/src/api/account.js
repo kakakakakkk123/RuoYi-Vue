@@ -23,11 +23,27 @@ export function resetStudentPassword(userId, password) {
   })
 }
 
+export function resetStudentPasswords(userIds, password) {
+  return request({
+    url: '/account/students/password',
+    method: 'put',
+    data: { roleIds: userIds, password }
+  })
+}
+
 export function changeStudentStatus(userId, status) {
   return request({
     url: '/account/students/' + userId + '/status',
     method: 'put',
     data: { status }
+  })
+}
+
+export function changeStudentStatuses(userIds, status) {
+  return request({
+    url: '/account/students/status',
+    method: 'put',
+    data: { roleIds: userIds, status }
   })
 }
 
@@ -50,5 +66,24 @@ export function setRegisterEnabled(status) {
     url: '/account/registerEnabled',
     method: 'put',
     data: { status }
+  })
+}
+
+export function importStudents(data) {
+  return request({
+    url: '/account/students/importData',
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    method: 'post',
+    data
+  })
+}
+
+export function getStudentImportTemplate() {
+  return request({
+    url: '/account/students/importTemplate',
+    method: 'post',
+    responseType: 'blob'
   })
 }

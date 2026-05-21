@@ -27,11 +27,17 @@ public interface IStudentAccountService
 
     public int resetStudentPassword(Long userId, String password);
 
+    public int resetStudentPasswords(Long[] userIds, String password);
+
     public int changeStudentStatus(Long userId, String status);
+
+    public int changeStudentStatuses(Long[] userIds, String status);
 
     public int deleteStudentUsers(Long[] userIds);
 
     public boolean studentRegisterEnabled();
 
     public boolean updateStudentRegisterEnabled(boolean enabled, String operName);
+
+    public String importStudentUsers(List<SysUser> userList, Boolean isUpdateSupport, Boolean disableMissing, String operName);
 }

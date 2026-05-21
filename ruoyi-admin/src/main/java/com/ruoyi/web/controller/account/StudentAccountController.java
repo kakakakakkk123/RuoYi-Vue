@@ -1,9 +1,9 @@
 package com.ruoyi.web.controller.account;
 
-import java.util.List;
 import org.apache.commons.lang3.ArrayUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import com.ruoyi.common.annotation.Anonymous;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
@@ -21,6 +22,7 @@ import com.ruoyi.common.core.domain.model.RegisterBody;
 import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.framework.web.service.SysPasswordService;
 import com.ruoyi.framework.web.service.SysRegisterService;
 import com.ruoyi.system.service.ISysConfigService;
@@ -79,6 +81,24 @@ public class StudentAccountController extends BaseController
     }
 
     @PreAuthorize("@ss.hasAnyRoles('teacher,admin')")
+    @PostMapping("/students/importData")
+    public AjaxResult importData(MultipartFile file, boolean updateSupport, boolean disableMissing) throws Exception
+    {
+        ExcelUtil<SysUser> util = new ExcelUtil<SysUser>(SysUser.class);
+        java.util.List<SysUser> userList = util.importExcel(file.getInputStream());
+        String msg = studentAccountService.importStudentUsers(userList, updateSupport, disableMissing, getUsername());
+        return success(msg);
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('teacher,admin')")
+    @PostMapping("/students/importTemplate")
+    public void importTemplate(jakarta.servlet.http.HttpServletResponse response)
+    {
+        ExcelUtil<SysUser> util = new ExcelUtil<SysUser>(SysUser.class);
+        util.importTemplateExcel(response, "学生数据");
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('teacher,admin')")
     @GetMapping("/students/{userId}")
     public AjaxResult student(@PathVariable Long userId)
     {
@@ -99,6 +119,25 @@ public class StudentAccountController extends BaseController
     public AjaxResult changeStatus(@PathVariable Long userId, @RequestBody SysUser body)
     {
         return toAjax(studentAccountService.changeStudentStatus(userId, body.getStatus()));
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('teacher,admin')")
+    @PutMapping("/students/password")
+    public AjaxResult resetPasswords(@RequestBody SysUser body)
+    {
+        AjaxResult result = toAjax(studentAccountService.resetStudentPasswords(body.getRoleIds(), body.getPassword()));
+        for (Long userId : body.getRoleIds())
+        {
+            passwordService.clearLoginRecordCache(studentAccountService.selectStudentByUserId(userId).getUserName());
+        }
+        return result;
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('teacher,admin')")
+    @PutMapping("/students/status")
+    public AjaxResult changeStatuses(@RequestBody SysUser body)
+    {
+        return toAjax(studentAccountService.changeStudentStatuses(body.getRoleIds(), body.getStatus()));
     }
 
     @PreAuthorize("@ss.hasAnyRoles('teacher,admin')")

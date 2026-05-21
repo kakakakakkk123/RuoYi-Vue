@@ -48,6 +48,9 @@
             <el-tab-pane label="基本资料" name="userinfo">
               <userInfo :user="user" />
             </el-tab-pane>
+            <el-tab-pane label="学习档案" name="studentProfile">
+              <studentProfile />
+            </el-tab-pane>
             <el-tab-pane label="修改密码" name="resetPwd">
               <resetPwd />
             </el-tab-pane>
@@ -62,11 +65,12 @@
 import userAvatar from "./userAvatar"
 import userInfo from "./userInfo"
 import resetPwd from "./resetPwd"
+import studentProfile from "./studentProfile"
 import { getUserProfile } from "@/api/system/user"
 
 export default {
   name: "Profile",
-  components: { userAvatar, userInfo, resetPwd },
+  components: { userAvatar, userInfo, resetPwd, studentProfile },
   data() {
     return {
       user: {},

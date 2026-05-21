@@ -100,6 +100,21 @@ export function updateUserPwd(oldPassword, newPassword) {
   })
 }
 
+export function getStudentProfile() {
+  return request({
+    url: '/system/user/profile/student',
+    method: 'get'
+  })
+}
+
+export function updateStudentProfile(data) {
+  return request({
+    url: '/system/user/profile/student',
+    method: 'put',
+    data: data
+  })
+}
+
 // 用户头像上传
 export function uploadAvatar(data) {
   return request({

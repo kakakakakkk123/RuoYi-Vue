@@ -1,14 +1,9 @@
 <template>
   <div class="login">
     <el-form ref="loginForm" :model="loginForm" :rules="loginRules" class="login-form">
-      <h3 class="title">{{title}}</h3>
+      <h3 class="title">{{ title }}</h3>
       <el-form-item prop="username">
-        <el-input
-          v-model="loginForm.username"
-          type="text"
-          auto-complete="off"
-          placeholder="账号"
-        >
+        <el-input v-model="loginForm.username" type="text" auto-complete="off" placeholder="账号">
           <svg-icon slot="prefix" icon-class="user" class="el-input__icon input-icon" />
         </el-input>
       </el-form-item>
@@ -18,6 +13,7 @@
           type="password"
           auto-complete="off"
           placeholder="密码"
+          show-password
           @keyup.enter.native="handleLogin"
         >
           <svg-icon slot="prefix" icon-class="password" class="el-input__icon input-icon" />
@@ -34,27 +30,26 @@
           <svg-icon slot="prefix" icon-class="validCode" class="el-input__icon input-icon" />
         </el-input>
         <div class="login-code">
-          <img :src="codeUrl" @click="getCode" class="login-code-img"/>
+          <img :src="codeUrl" @click="getCode" class="login-code-img" />
         </div>
       </el-form-item>
-      <el-checkbox v-model="loginForm.rememberMe" style="margin:0px 0px 25px 0px;">记住密码</el-checkbox>
+      <el-checkbox v-model="loginForm.rememberMe" style="margin:0 0 25px 0;">记住账号</el-checkbox>
       <el-form-item style="width:100%;">
-        <el-button
-          :loading="loading"
-          size="medium"
-          type="primary"
-          style="width:100%;"
-          @click.native.prevent="handleLogin"
-        >
-          <span v-if="!loading">登 录</span>
-          <span v-else>登 录 中...</span>
+        <el-button :loading="loading" size="medium" type="primary" style="width:100%;" @click.native.prevent="handleLogin">
+          <span v-if="!loading">登录</span>
+          <span v-else>登录中...</span>
+        </el-button>
+        <el-button plain size="medium" style="width:100%;margin-top:12px;" @click="$router.push('/course-square')">
+          游客浏览课程
         </el-button>
         <div style="float: right;" v-if="register">
           <router-link class="link-type" :to="'/register'">立即注册</router-link>
         </div>
+        <div style="float: left;">
+          <router-link class="link-type" :to="'/forgot-password'">忘记密码</router-link>
+        </div>
       </el-form-item>
     </el-form>
-    <!--  底部  -->
     <div class="el-login-footer">
       <span>{{ footerContent }}</span>
     </div>
@@ -83,24 +78,22 @@ export default {
       },
       loginRules: {
         username: [
-          { required: true, trigger: "blur", message: "请输入您的账号" }
+          { required: true, trigger: "blur", message: "请输入账号" }
         ],
         password: [
-          { required: true, trigger: "blur", message: "请输入您的密码" }
+          { required: true, trigger: "blur", message: "请输入密码" }
         ],
         code: [{ required: true, trigger: "change", message: "请输入验证码" }]
       },
       loading: false,
-      // 验证码开关
       captchaEnabled: true,
-      // 注册开关
-      register: false,
+      register: true,
       redirect: undefined
     }
   },
   watch: {
     $route: {
-      handler: function(route) {
+      handler(route) {
         this.redirect = route.query && route.query.redirect
       },
       immediate: true
@@ -114,6 +107,8 @@ export default {
     getCode() {
       getCodeImg().then(res => {
         this.captchaEnabled = res.captchaEnabled === undefined ? true : res.captchaEnabled
+        this.register = res.registerEnabled === undefined ? true : res.registerEnabled
+        this.loginRules.code = this.captchaEnabled ? [{ required: true, trigger: "change", message: "请输入验证码" }] : []
         if (this.captchaEnabled) {
           this.codeUrl = "data:image/gif;base64," + res.img
           this.loginForm.uuid = res.uuid
@@ -144,7 +139,7 @@ export default {
             Cookies.remove('rememberMe')
           }
           this.$store.dispatch("Login", this.loginForm).then(() => {
-            this.$router.push({ path: this.redirect || "/" }).catch(()=>{})
+            this.$router.push({ path: this.redirect || "/" }).catch(() => {})
           }).catch(() => {
             this.loading = false
             if (this.captchaEnabled) {
@@ -168,11 +163,10 @@ export default {
   background-size: cover;
 }
 .title {
-  margin: 0px auto 30px auto;
+  margin: 0 auto 30px auto;
   text-align: center;
   color: #707070;
 }
-
 .login-form {
   border-radius: 6px;
   background: #ffffff;
@@ -190,11 +184,6 @@ export default {
     width: 14px;
     margin-left: 2px;
   }
-}
-.login-tip {
-  font-size: 13px;
-  text-align: center;
-  color: #bfbfbf;
 }
 .login-code {
   width: 33%;

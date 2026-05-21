@@ -24,6 +24,18 @@ export function register(data) {
   return request({
     url: '/register',
     headers: {
+      isToken: false,
+      repeatSubmit: false
+    },
+    method: 'post',
+    data: data
+  })
+}
+
+export function forgotPassword(data) {
+  return request({
+    url: '/account/forgotPassword',
+    headers: {
       isToken: false
     },
     method: 'post',

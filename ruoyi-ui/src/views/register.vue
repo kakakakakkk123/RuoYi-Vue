@@ -1,65 +1,98 @@
 <template>
-  <div class="register">
-    <el-form ref="registerForm" :model="registerForm" :rules="registerRules" class="register-form">
-      <h3 class="title">{{title}}</h3>
-      <el-form-item prop="username">
-        <el-input v-model="registerForm.username" type="text" auto-complete="off" placeholder="账号">
-          <svg-icon slot="prefix" icon-class="user" class="el-input__icon input-icon" />
-        </el-input>
-      </el-form-item>
-      <el-form-item prop="password" :rules="registerPwdValidator">
-        <el-input
-          v-model="registerForm.password"
-          type="password"
-          auto-complete="off"
-          placeholder="密码"
-          @keyup.enter.native="handleRegister"
-        >
-          <svg-icon slot="prefix" icon-class="password" class="el-input__icon input-icon" />
-        </el-input>
-      </el-form-item>
-      <el-form-item prop="confirmPassword">
-        <el-input
-          v-model="registerForm.confirmPassword"
-          type="password"
-          auto-complete="off"
-          placeholder="确认密码"
-          @keyup.enter.native="handleRegister"
-        >
-          <svg-icon slot="prefix" icon-class="password" class="el-input__icon input-icon" />
-        </el-input>
-      </el-form-item>
-      <el-form-item prop="code" v-if="captchaEnabled">
-        <el-input
-          v-model="registerForm.code"
-          auto-complete="off"
-          placeholder="验证码"
-          style="width: 63%"
-          @keyup.enter.native="handleRegister"
-        >
-          <svg-icon slot="prefix" icon-class="validCode" class="el-input__icon input-icon" />
-        </el-input>
-        <div class="register-code">
-          <img :src="codeUrl" @click="getCode" class="register-code-img"/>
+  <div class="register-page">
+    <div class="register-panel">
+      <div class="register-hero">
+        <p class="eyebrow">学生自主注册</p>
+        <h3 class="title">{{ title }}</h3>
+        <p class="subtitle">使用学号创建账号，按提示完成注册后即可登录。</p>
+        <el-alert
+          title="填写说明"
+          type="info"
+          :closable="false"
+          description="请先准备好学号、登录账号、昵称和密码；如系统开启验证码，请按图输入。"
+          show-icon
+        />
+        <el-alert
+          v-if="!registerEnabled"
+          title="当前未开放学生自主注册"
+          type="warning"
+          :closable="false"
+          show-icon
+          style="margin-top: 12px;"
+        />
+      </div>
+
+      <el-form ref="registerForm" :model="registerForm" :rules="registerRules" class="register-form">
+        <el-form-item prop="username">
+          <el-input v-model.trim="registerForm.username" placeholder="登录账号">
+            <svg-icon slot="prefix" icon-class="user" class="el-input__icon input-icon" />
+          </el-input>
+        </el-form-item>
+        <el-form-item prop="studentNo">
+          <el-input v-model.trim="registerForm.studentNo" placeholder="学号">
+            <svg-icon slot="prefix" icon-class="number" class="el-input__icon input-icon" />
+          </el-input>
+        </el-form-item>
+        <el-form-item prop="nickName">
+          <el-input v-model.trim="registerForm.nickName" placeholder="昵称">
+            <svg-icon slot="prefix" icon-class="user" class="el-input__icon input-icon" />
+          </el-input>
+        </el-form-item>
+        <el-form-item prop="email">
+          <el-input v-model.trim="registerForm.email" placeholder="校内邮箱（可选）">
+            <svg-icon slot="prefix" icon-class="email" class="el-input__icon input-icon" />
+          </el-input>
+        </el-form-item>
+        <el-form-item prop="password" :rules="registerPwdValidator">
+          <el-input
+            v-model="registerForm.password"
+            type="password"
+            show-password
+            placeholder="密码"
+            @keyup.enter.native="handleRegister"
+          >
+            <svg-icon slot="prefix" icon-class="password" class="el-input__icon input-icon" />
+          </el-input>
+        </el-form-item>
+        <el-form-item prop="confirmPassword">
+          <el-input
+            v-model="registerForm.confirmPassword"
+            type="password"
+            show-password
+            placeholder="确认密码"
+            @keyup.enter.native="handleRegister"
+          >
+            <svg-icon slot="prefix" icon-class="password" class="el-input__icon input-icon" />
+          </el-input>
+        </el-form-item>
+        <el-form-item v-if="captchaEnabled" prop="code">
+          <el-input
+            v-model.trim="registerForm.code"
+            placeholder="验证码"
+            style="width: 63%"
+            @keyup.enter.native="handleRegister"
+          >
+            <svg-icon slot="prefix" icon-class="validCode" class="el-input__icon input-icon" />
+          </el-input>
+          <div class="register-code">
+            <img :src="codeUrl" class="register-code-img" @click="getCode" />
+          </div>
+        </el-form-item>
+        <div class="form-tip">
+          如果填写了校内邮箱，后续可用于找回密码；当前版本仍以学号作为注册主标识。
         </div>
-      </el-form-item>
-      <el-form-item style="width:100%;">
-        <el-button
-          :loading="loading"
-          size="medium"
-          type="primary"
-          style="width:100%;"
-          @click.native.prevent="handleRegister"
-        >
-          <span v-if="!loading">注 册</span>
-          <span v-else>注 册 中...</span>
-        </el-button>
-        <div style="float: right;">
-          <router-link class="link-type" :to="'/login'">使用已有账户登录</router-link>
-        </div>
-      </el-form-item>
-    </el-form>
-    <!--  底部  -->
+        <el-form-item style="width: 100%;">
+          <el-button :loading="loading" :disabled="!registerEnabled" size="medium" type="primary" style="width: 100%;" @click.native.prevent="handleRegister">
+            <span v-if="!loading">注册</span>
+            <span v-else>注册中...</span>
+          </el-button>
+          <div class="link-row">
+            <router-link class="link-type" :to="'/login'">返回登录</router-link>
+          </div>
+        </el-form-item>
+      </el-form>
+    </div>
+
     <div class="el-register-footer">
       <span>{{ footerContent }}</span>
     </div>
@@ -69,7 +102,7 @@
 <script>
 import { getCodeImg, register } from "@/api/login"
 import passwordRule from "@/utils/passwordRule"
-import defaultSettings from '@/settings'
+import defaultSettings from "@/settings"
 
 export default {
   mixins: [passwordRule],
@@ -80,24 +113,39 @@ export default {
       codeUrl: "",
       registerForm: {
         username: "",
+        studentNo: "",
+        nickName: "",
+        email: "",
         password: "",
         confirmPassword: "",
         code: "",
         uuid: ""
       },
       loading: false,
-      captchaEnabled: true
+      captchaEnabled: true,
+      registerEnabled: true
     }
   },
   computed: {
     registerRules() {
-      return {
+      const rules = {
         username: [
-          { required: true, trigger: "blur", message: "请输入您的账号" },
-          { min: 2, max: 20, message: '用户账号长度必须介于 2 和 20 之间', trigger: 'blur' }
+          { required: true, trigger: "blur", message: "请输入登录账号" },
+          { min: 2, max: 20, trigger: "blur", message: "账号长度必须在 2 到 20 个字符之间" }
+        ],
+        studentNo: [
+          { required: true, trigger: "blur", message: "请输入学号" },
+          { min: 2, max: 20, trigger: "blur", message: "学号长度不能超过 20 个字符" }
+        ],
+        nickName: [
+          { required: true, trigger: "blur", message: "请输入昵称" },
+          { min: 2, max: 30, trigger: "blur", message: "昵称长度不能超过 30 个字符" }
+        ],
+        email: [
+          { type: "email", trigger: ["blur", "change"], message: "请输入正确的邮箱地址" }
         ],
         confirmPassword: [
-          { required: true, message: "请再次输入您的密码", trigger: "blur" },
+          { required: true, trigger: "blur", message: "请再次输入密码" },
           {
             validator: (rule, value, callback) => {
               if (this.registerForm.password !== value) {
@@ -105,11 +153,15 @@ export default {
               } else {
                 callback()
               }
-            }, trigger: "blur"
+            },
+            trigger: "blur"
           }
-        ],
-        code: [{ required: true, trigger: "change", message: "请输入验证码" }]
+        ]
       }
+      if (this.captchaEnabled) {
+        rules.code = [{ required: true, trigger: "change", message: "请输入验证码" }]
+      }
+      return rules
     }
   },
   created() {
@@ -119,31 +171,43 @@ export default {
     getCode() {
       getCodeImg().then(res => {
         this.captchaEnabled = res.captchaEnabled === undefined ? true : res.captchaEnabled
+        this.registerEnabled = res.registerEnabled === undefined ? true : res.registerEnabled
         if (this.captchaEnabled) {
           this.codeUrl = "data:image/gif;base64," + res.img
           this.registerForm.uuid = res.uuid
         }
-      })
+      }).catch(() => {})
     },
     handleRegister() {
+      if (!this.registerEnabled) {
+        this.$modal.msgWarning("当前未开放学生自主注册")
+        return
+      }
       this.$refs.registerForm.validate(valid => {
-        if (valid) {
-          this.loading = true
-          register(this.registerForm).then(() => {
-            const username = this.registerForm.username
-            this.$alert("<font color='red'>恭喜你，您的账号 " + username + " 注册成功！</font>", '系统提示', {
-              dangerouslyUseHTMLString: true,
-              type: 'success'
+        if (!valid) {
+          return
+        }
+        this.loading = true
+        register(this.registerForm)
+          .then(res => {
+            const message = (res && res.msg) || ("账号 " + this.registerForm.username + " 注册成功")
+            this.$alert(message, "注册成功", {
+              confirmButtonText: "去登录",
+              type: "success"
             }).then(() => {
               this.$router.push("/login")
             }).catch(() => {})
-          }).catch(() => {
-            this.loading = false
+          })
+          .catch(error => {
+            const message = (error && error.message) ? error.message : "注册失败，请检查输入后重试"
+            this.$modal.msgError(message)
             if (this.captchaEnabled) {
               this.getCode()
             }
           })
-        }
+          .finally(() => {
+            this.loading = false
+          })
       })
     }
   }
@@ -151,64 +215,107 @@ export default {
 </script>
 
 <style rel="stylesheet/scss" lang="scss" scoped>
-.register {
+.register-page {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100%;
-  background-image: url("../assets/images/login-background.jpg");
+  min-height: 100%;
+  padding: 24px;
+  background:
+    linear-gradient(135deg, rgba(17, 24, 39, 0.76), rgba(15, 23, 42, 0.62)),
+    url("../assets/images/login-background.jpg");
   background-size: cover;
+  background-position: center;
 }
+
+.register-panel {
+  width: 440px;
+  max-width: 100%;
+  padding: 28px 28px 18px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.3);
+}
+
+.register-hero {
+  margin-bottom: 20px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #2f6bff;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+}
+
 .title {
-  margin: 0px auto 30px auto;
-  text-align: center;
-  color: #707070;
+  margin: 0;
+  font-size: 26px;
+  color: #1f2937;
+}
+
+.subtitle {
+  margin: 8px 0 14px;
+  color: #6b7280;
+  line-height: 1.6;
 }
 
 .register-form {
-  border-radius: 6px;
-  background: #ffffff;
-  width: 400px;
-  padding: 25px 25px 5px 25px;
   .el-input {
-    height: 38px;
+    height: 40px;
+
     input {
-      height: 38px;
+      height: 40px;
     }
   }
+
   .input-icon {
     height: 39px;
     width: 14px;
     margin-left: 2px;
   }
 }
-.register-tip {
-  font-size: 13px;
-  text-align: center;
-  color: #bfbfbf;
+
+.form-tip {
+  margin-bottom: 16px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #6b7280;
 }
+
 .register-code {
   width: 33%;
-  height: 38px;
+  height: 40px;
   float: right;
+
   img {
     cursor: pointer;
     vertical-align: middle;
   }
 }
+
+.register-code-img {
+  height: 40px;
+  width: 100%;
+  border-radius: 4px;
+}
+
+.link-row {
+  margin-top: 12px;
+  text-align: right;
+}
+
 .el-register-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
   height: 40px;
   line-height: 40px;
-  position: fixed;
-  bottom: 0;
-  width: 100%;
   text-align: center;
   color: #fff;
   font-family: Arial;
   font-size: 12px;
   letter-spacing: 1px;
-}
-.register-code-img {
-  height: 38px;
 }
 </style>

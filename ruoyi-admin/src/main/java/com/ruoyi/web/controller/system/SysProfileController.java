@@ -24,7 +24,9 @@ import com.ruoyi.common.utils.file.FileUploadUtils;
 import com.ruoyi.common.utils.file.FileUtils;
 import com.ruoyi.common.utils.file.MimeTypeUtils;
 import com.ruoyi.framework.web.service.TokenService;
+import com.ruoyi.system.domain.StudentProfile;
 import com.ruoyi.system.service.ISysUserService;
+import com.ruoyi.system.service.IStudentAccountService;
 
 /**
  * 个人信息 业务处理
@@ -41,6 +43,9 @@ public class SysProfileController extends BaseController
     @Autowired
     private TokenService tokenService;
 
+    @Autowired
+    private IStudentAccountService studentAccountService;
+
     /**
      * 个人信息
      */
@@ -52,6 +57,7 @@ public class SysProfileController extends BaseController
         AjaxResult ajax = AjaxResult.success(user);
         ajax.put("roleGroup", userService.selectUserRoleGroup(loginUser.getUsername()));
         ajax.put("postGroup", userService.selectUserPostGroup(loginUser.getUsername()));
+        ajax.put("studentProfile", studentAccountService.selectStudentProfileByUserId(loginUser.getUserId()));
         return ajax;
     }
 
@@ -83,6 +89,36 @@ public class SysProfileController extends BaseController
             return success();
         }
         return error("修改个人信息异常，请联系管理员");
+    }
+
+    /**
+     * 学生档案
+     */
+    @GetMapping("/student")
+    public AjaxResult studentProfile()
+    {
+        LoginUser loginUser = getLoginUser();
+        return success(studentAccountService.selectStudentProfileByUserId(loginUser.getUserId()));
+    }
+
+    /**
+     * 学生档案更新
+     */
+    @Log(title = "个人信息", businessType = BusinessType.UPDATE)
+    @PutMapping("/student")
+    public AjaxResult updateStudentProfile(@RequestBody StudentProfile profile)
+    {
+        LoginUser loginUser = getLoginUser();
+        SysUser user = new SysUser();
+        user.setUserId(loginUser.getUserId());
+        user.setNickName(loginUser.getUser().getNickName());
+        user.setEmail(loginUser.getUser().getEmail());
+        user.setPhonenumber(loginUser.getUser().getPhonenumber());
+        user.setSex(loginUser.getUser().getSex());
+        user.setAvatar(loginUser.getUser().getAvatar());
+        studentAccountService.updateStudentProfile(user, profile);
+        tokenService.setLoginUser(loginUser);
+        return success();
     }
 
     /**

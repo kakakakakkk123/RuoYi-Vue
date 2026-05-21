@@ -549,7 +549,7 @@ insert into sys_config values(1, '主框架页-默认皮肤样式名称',     's
 insert into sys_config values(2, '用户管理-账号初始密码',         'sys.user.initPassword',            '123456',        'Y', 'admin', sysdate(), '', null, '初始化密码 123456' );
 insert into sys_config values(3, '主框架页-侧边栏主题',           'sys.index.sideTheme',              'theme-dark',    'Y', 'admin', sysdate(), '', null, '深色主题theme-dark，浅色主题theme-light' );
 insert into sys_config values(4, '账号自助-验证码开关',           'sys.account.captchaEnabled',       'true',          'Y', 'admin', sysdate(), '', null, '是否开启验证码功能（true开启，false关闭）');
-insert into sys_config values(5, '账号自助-是否开启用户注册功能', 'sys.account.registerUser',         'false',         'Y', 'admin', sysdate(), '', null, '是否开启注册用户功能（true开启，false关闭）');
+insert into sys_config values(5, '账号自助-是否开启用户注册功能', 'sys.account.registerUser',         'true',          'Y', 'admin', sysdate(), '', null, '是否开启注册用户功能（true开启，false关闭）');
 insert into sys_config values(6, '用户登录-黑名单列表',           'sys.login.blackIPList',            '',              'Y', 'admin', sysdate(), '', null, '设置登录IP黑名单限制，多个匹配项以;分隔，支持匹配（*通配、网段）');
 insert into sys_config values(7, '用户管理-初始密码修改策略',     'sys.account.initPasswordModify',   '1',             'Y', 'admin', sysdate(), '', null, '0：初始密码修改策略关闭，没有任何提示，1：提醒用户，如果未修改初始密码，则在登录时就会提醒修改密码对话框');
 insert into sys_config values(8, '用户管理-账号密码更新周期',     'sys.account.passwordValidateDays', '0',             'Y', 'admin', sysdate(), '', null, '密码更新周期（填写数字，数据初始化值为0不限制，若修改必须为大于0小于365的正整数），如果超过这个周期登录系统时，则在登录时就会提醒修改密码对话框');
@@ -645,6 +645,73 @@ create table sys_notice (
 insert into sys_notice values('1', '温馨提醒：2018-07-01 若依新版本发布啦', '2', '新版本内容', '0', 'admin', sysdate(), '', null, '管理员');
 insert into sys_notice values('2', '维护通知：2018-07-01 若依系统凌晨维护', '1', '维护内容',   '0', 'admin', sysdate(), '', null, '管理员');
 insert into sys_notice values('3', '若依开源框架介绍', '1', '<p><span style=\"color: rgb(230, 0, 0);\">项目介绍</span></p><p><font color=\"#333333\">RuoYi开源项目是为企业用户定制的后台脚手架框架，为企业打造的一站式解决方案，降低企业开发成本，提升开发效率。主要包括用户管理、角色管理、部门管理、菜单管理、参数管理、字典管理、</font><span style=\"color: rgb(51, 51, 51);\">岗位管理</span><span style=\"color: rgb(51, 51, 51);\">、定时任务</span><span style=\"color: rgb(51, 51, 51);\">、</span><span style=\"color: rgb(51, 51, 51);\">服务监控、登录日志、操作日志、代码生成等功能。其中，还支持多数据源、数据权限、国际化、Redis缓存、Docker部署、滑动验证码、第三方认证登录、分布式事务、</span><font color=\"#333333\">分布式文件存储</font><span style=\"color: rgb(51, 51, 51);\">、分库分表处理等技术特点。</span></p><p><img src=\"https://foruda.gitee.com/images/1773931848342439032/a4d22313_1815095.png\" style=\"width: 64px;\"><br></p><p><span style=\"color: rgb(230, 0, 0);\">官网及演示</span></p><p><span style=\"color: rgb(51, 51, 51);\">若依官网地址：&nbsp;</span><a href=\"http://ruoyi.vip\" target=\"_blank\">http://ruoyi.vip</a><a href=\"http://ruoyi.vip\" target=\"_blank\"></a></p><p><span style=\"color: rgb(51, 51, 51);\">若依文档地址：&nbsp;</span><a href=\"http://doc.ruoyi.vip\" target=\"_blank\">http://doc.ruoyi.vip</a><br></p><p><span style=\"color: rgb(51, 51, 51);\">演示地址【不分离版】：&nbsp;</span><a href=\"http://demo.ruoyi.vip\" target=\"_blank\">http://demo.ruoyi.vip</a></p><p><span style=\"color: rgb(51, 51, 51);\">演示地址【分离版本】：&nbsp;</span><a href=\"http://vue.ruoyi.vip\" target=\"_blank\">http://vue.ruoyi.vip</a></p><p><span style=\"color: rgb(51, 51, 51);\">演示地址【微服务版】：&nbsp;</span><a href=\"http://cloud.ruoyi.vip\" target=\"_blank\">http://cloud.ruoyi.vip</a></p><p><span style=\"color: rgb(51, 51, 51);\">演示地址【移动端版】：&nbsp;</span><a href=\"http://h5.ruoyi.vip\" target=\"_blank\">http://h5.ruoyi.vip</a></p><p><br style=\"color: rgb(48, 49, 51); font-family: &quot;Helvetica Neue&quot;, Helvetica, Arial, sans-serif; font-size: 12px;\"></p>', '0', 'admin', sysdate(), '', null, '管理员');
+
+-- ----------------------------
+-- 账户模块扩展
+-- ----------------------------
+alter table sys_user add column student_no varchar(20) default '' comment '学号' after nick_name;
+
+drop table if exists edu_student_profile;
+create table edu_student_profile (
+  profile_id        bigint(20)      not null auto_increment comment '档案ID',
+  user_id           bigint(20)      not null               comment '用户ID',
+  signature         varchar(200)    default ''             comment '个性签名',
+  todo_items        longtext                                comment '个人待办事项',
+  learning_history  longtext                                comment '学习历史',
+  learning_notes    longtext                                comment '学习笔记',
+  favorites         longtext                                comment '我的收藏',
+  wrong_questions   longtext                                comment '我的错题',
+  discussions       longtext                                comment '我的讨论',
+  create_by         varchar(64)     default ''             comment '创建者',
+  create_time       datetime                                comment '创建时间',
+  update_by         varchar(64)     default ''             comment '更新者',
+  update_time       datetime                                comment '更新时间',
+  remark            varchar(500)    default null           comment '备注',
+  primary key (profile_id),
+  unique key uk_user_id (user_id)
+) engine=innodb auto_increment=1 comment = '学生档案表';
+
+insert into sys_role values('3', '教师', 'teacher', 3, 1, 1, 1, '0', '0', 'admin', sysdate(), '', null, '教师角色');
+insert into sys_role values('4', '学生', 'student', 4, 2, 1, 1, '0', '0', 'admin', sysdate(), '', null, '学生角色');
+
+insert into sys_menu values('2000', '账户管理', '0', '5', 'account', null, '', '', 1, 0, 'M', '0', '0', '', 'user', 'admin', sysdate(), '', null, '账户管理目录');
+insert into sys_menu values('2001', '学生管理', '2000', '1', 'student', 'account/student/index', '', '', 1, 0, 'C', '0', '0', 'account:student:list', 'peoples', 'admin', sysdate(), '', null, '学生管理菜单');
+insert into sys_menu values('2002', '学生管理查询', '2001', '1', '', '', '', '', 1, 0, 'F', '0', '0', 'account:student:list', '#', 'admin', sysdate(), '', null, '');
+insert into sys_menu values('2003', '学生管理重置密码', '2001', '2', '', '', '', '', 1, 0, 'F', '0', '0', 'account:student:resetPwd', '#', 'admin', sysdate(), '', null, '');
+insert into sys_menu values('2004', '学生管理删除', '2001', '3', '', '', '', '', 1, 0, 'F', '0', '0', 'account:student:remove', '#', 'admin', sysdate(), '', null, '');
+insert into sys_menu values('2005', '学生管理状态', '2001', '4', '', '', '', '', 1, 0, 'F', '0', '0', 'account:student:edit', '#', 'admin', sysdate(), '', null, '');
+
+insert into sys_user values(3, 103, 'teacher', '教师', 'TS001', 'teacher@school.edu.cn', '13800000000', '1', '', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '0', '0', '127.0.0.1', sysdate(), sysdate(), 'admin', sysdate(), '', null, '教师账号');
+insert into sys_user_role values ('3', '3');
+insert into sys_menu values('2100', '教学管理', '0', '5', 'teaching', null, '', '', 0, 0, 'M', '0', '0', '', 'education', 'admin', sysdate(), '', null, '教师教学管理目录');
+insert into sys_menu values('2101', '课程管理', '2100', '1', 'course', 'teaching/course/index', '', '', 0, 0, 'C', '0', '0', 'teaching:course:list', 'form', 'admin', sysdate(), '', null, '课程管理菜单');
+insert into sys_menu values('2102', '学生管理', '2100', '2', 'student', 'account/student/index', '', '', 0, 0, 'C', '0', '0', 'account:student:list', 'peoples', 'admin', sysdate(), '', null, '学生管理菜单');
+insert into sys_menu values('2103', '试卷管理', '2100', '3', 'paper', 'teaching/paper/index', '', '', 0, 0, 'C', '0', '0', 'teaching:paper:list', 'documentation', 'admin', sysdate(), '', null, '试卷管理菜单');
+insert into sys_menu values('2104', '成绩统计', '2100', '4', 'score', 'teaching/score/index', '', '', 0, 0, 'C', '0', '0', 'teaching:score:list', 'chart', 'admin', sysdate(), '', null, '成绩统计菜单');
+insert into sys_menu values('2200', '学习中心', '0', '6', 'learning', null, '', '', 0, 0, 'M', '0', '0', '', 'guide', 'admin', sysdate(), '', null, '学生学习中心目录');
+insert into sys_menu values('2201', '我的课程', '2200', '1', 'my-course', 'learning/my-course/index', '', '', 0, 0, 'C', '0', '0', 'learning:course:list', 'dashboard', 'admin', sysdate(), '', null, '我的课程菜单');
+insert into sys_menu values('2202', '在线学习', '2200', '2', 'online', 'learning/online/index', '', '', 0, 0, 'C', '0', '0', 'learning:online:list', 'build', 'admin', sysdate(), '', null, '在线学习菜单');
+insert into sys_menu values('2203', '我的考试', '2200', '3', 'exam', 'learning/exam/index', '', '', 0, 0, 'C', '0', '0', 'learning:exam:list', 'documentation', 'admin', sysdate(), '', null, '我的考试菜单');
+insert into sys_menu values('2204', '我的错题', '2200', '4', 'wrong', 'learning/wrong/index', '', '', 0, 0, 'C', '0', '0', 'learning:wrong:list', 'bug', 'admin', sysdate(), '', null, '我的错题菜单');
+insert into sys_menu values('2205', '收藏', '2200', '5', 'favorite', 'learning/favorite/index', '', '', 0, 0, 'C', '0', '0', 'learning:favorite:list', 'star', 'admin', sysdate(), '', null, '收藏菜单');
+insert into sys_menu values('2206', '笔记', '2200', '6', 'note', 'learning/note/index', '', '', 0, 0, 'C', '0', '0', 'learning:note:list', 'edit', 'admin', sysdate(), '', null, '笔记菜单');
+insert into sys_role_menu values ('3', '2100');
+insert into sys_role_menu values ('3', '2101');
+insert into sys_role_menu values ('3', '2102');
+insert into sys_role_menu values ('3', '2103');
+insert into sys_role_menu values ('3', '2104');
+insert into sys_role_menu values ('4', '2200');
+insert into sys_role_menu values ('4', '2201');
+insert into sys_role_menu values ('4', '2202');
+insert into sys_role_menu values ('4', '2203');
+insert into sys_role_menu values ('4', '2204');
+insert into sys_role_menu values ('4', '2205');
+insert into sys_role_menu values ('4', '2206');
+
+insert into sys_user values(4, 103, 'student01', '学生一号', 'ST001', 'student01@school.edu.cn', '13900000001', '0', '', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '0', '0', '127.0.0.1', sysdate(), sysdate(), 'admin', sysdate(), '', null, '示例学生账号');
+insert into sys_user_role values ('4', '4');
+insert into edu_student_profile(user_id, signature, todo_items, learning_history, learning_notes, favorites, wrong_questions, discussions, create_by, create_time)
+values (4, '认真学习，持续进步', '完成 Java Web 课程实验和数据库作业', '已完成 Java Web 第 1~6 章学习', '本周重点复习过滤器和拦截器', '收藏：Spring Security 登录流程图', '错题：数据库范式综合题', '讨论：期末项目模块分工', 'admin', sysdate());
 
 
 -- ----------------------------

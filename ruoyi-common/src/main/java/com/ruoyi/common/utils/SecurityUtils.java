@@ -71,9 +71,14 @@ public class SecurityUtils
      **/
     public static LoginUser getLoginUser()
     {
+        Authentication authentication = getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof LoginUser))
+        {
+            return null;
+        }
         try
         {
-            return (LoginUser) getAuthentication().getPrincipal();
+            return (LoginUser) authentication.getPrincipal();
         }
         catch (Exception e)
         {

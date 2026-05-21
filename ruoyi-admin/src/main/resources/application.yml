@@ -63,6 +63,18 @@ spring:
   jackson:
     time-zone: GMT+8
     date-format: yyyy-MM-dd HH:mm:ss
+  mail:
+    host: smtp.example.com
+    port: 465
+    username: your-mail@example.com
+    password: your-mail-password
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          timeout: 5000
   # 服务模块
   devtools:
     restart:

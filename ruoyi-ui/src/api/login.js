@@ -32,6 +32,18 @@ export function register(data) {
   })
 }
 
+export function sendRegisterEmailCode(data) {
+  return request({
+    url: '/registerEmailCode',
+    headers: {
+      isToken: false,
+      repeatSubmit: false
+    },
+    method: 'post',
+    data: data
+  })
+}
+
 export function forgotPassword(data) {
   return request({
     url: '/account/forgotPassword',

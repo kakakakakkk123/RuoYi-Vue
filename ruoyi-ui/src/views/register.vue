@@ -4,12 +4,12 @@
       <div class="register-hero">
         <p class="eyebrow">学生自主注册</p>
         <h3 class="title">{{ title }}</h3>
-        <p class="subtitle">使用学号创建账号，按提示完成注册后即可登录。</p>
+        <p class="subtitle">使用学号创建账号，支持验证码与邮箱验证码两种校验方式。</p>
         <el-alert
           title="填写说明"
           type="info"
           :closable="false"
-          description="请先准备好学号、登录账号、昵称和密码；如系统开启验证码，请按图输入。"
+          description="请先准备好学号、登录账号、昵称和密码；如果填写邮箱，可点击发送验证码完成邮箱校验。"
           show-icon
         />
         <el-alert
@@ -41,6 +41,18 @@
         <el-form-item prop="email">
           <el-input v-model.trim="registerForm.email" placeholder="校内邮箱（可选）">
             <svg-icon slot="prefix" icon-class="email" class="el-input__icon input-icon" />
+            <el-button slot="append" :loading="emailCodeLoading" :disabled="!registerForm.email" @click="handleSendEmailCode">
+              发送验证码
+            </el-button>
+          </el-input>
+        </el-form-item>
+        <el-form-item v-if="registerForm.email" prop="emailCode">
+          <el-input
+            v-model.trim="registerForm.emailCode"
+            placeholder="邮箱验证码"
+            @keyup.enter.native="handleRegister"
+          >
+            <svg-icon slot="prefix" icon-class="validCode" class="el-input__icon input-icon" />
           </el-input>
         </el-form-item>
         <el-form-item prop="password" :rules="registerPwdValidator">
@@ -79,10 +91,17 @@
           </div>
         </el-form-item>
         <div class="form-tip">
-          如果填写了校内邮箱，后续可用于找回密码；当前版本仍以学号作为注册主标识。
+          如果填写了邮箱，可用于后续找回密码；当前版本仍以学号作为注册主标识。
         </div>
         <el-form-item style="width: 100%;">
-          <el-button :loading="loading" :disabled="!registerEnabled" size="medium" type="primary" style="width: 100%;" @click.native.prevent="handleRegister">
+          <el-button
+            :loading="loading"
+            :disabled="!registerEnabled"
+            size="medium"
+            type="primary"
+            style="width: 100%;"
+            @click.native.prevent="handleRegister"
+          >
             <span v-if="!loading">注册</span>
             <span v-else>注册中...</span>
           </el-button>
@@ -100,7 +119,7 @@
 </template>
 
 <script>
-import { getCodeImg, register } from "@/api/login"
+import { getCodeImg, register, sendRegisterEmailCode } from "@/api/login"
 import passwordRule from "@/utils/passwordRule"
 import defaultSettings from "@/settings"
 
@@ -116,12 +135,14 @@ export default {
         studentNo: "",
         nickName: "",
         email: "",
+        emailCode: "",
         password: "",
         confirmPassword: "",
         code: "",
         uuid: ""
       },
       loading: false,
+      emailCodeLoading: false,
       captchaEnabled: true,
       registerEnabled: true
     }
@@ -158,6 +179,9 @@ export default {
           }
         ]
       }
+      if (this.registerForm.email) {
+        rules.emailCode = [{ required: true, trigger: "blur", message: "请输入邮箱验证码" }]
+      }
       if (this.captchaEnabled) {
         rules.code = [{ required: true, trigger: "change", message: "请输入验证码" }]
       }
@@ -177,6 +201,29 @@ export default {
           this.registerForm.uuid = res.uuid
         }
       }).catch(() => {})
+    },
+    handleSendEmailCode() {
+      this.$refs.registerForm.validateField("email", error => {
+        if (error) {
+          return
+        }
+        if (!this.registerForm.email) {
+          this.$modal.msgWarning("请先填写邮箱")
+          return
+        }
+        this.emailCodeLoading = true
+        sendRegisterEmailCode({ email: this.registerForm.email })
+          .then(() => {
+            this.$modal.msgSuccess("邮箱验证码已发送，请注意查收")
+          })
+          .catch(error => {
+            const message = (error && error.message) ? error.message : "邮箱验证码发送失败"
+            this.$modal.msgError(message)
+          })
+          .finally(() => {
+            this.emailCodeLoading = false
+          })
+      })
     },
     handleRegister() {
       if (!this.registerEnabled) {

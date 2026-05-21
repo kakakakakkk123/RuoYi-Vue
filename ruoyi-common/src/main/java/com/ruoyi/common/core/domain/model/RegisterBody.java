@@ -22,6 +22,8 @@ public class RegisterBody extends LoginBody
      */
     private String email;
 
+    private String emailCode;
+
     public String getStudentNo()
     {
         return studentNo;
@@ -50,6 +52,16 @@ public class RegisterBody extends LoginBody
     public void setEmail(String email)
     {
         this.email = email;
+    }
+
+    public String getEmailCode()
+    {
+        return emailCode;
+    }
+
+    public void setEmailCode(String emailCode)
+    {
+        this.emailCode = emailCode;
     }
 
 }

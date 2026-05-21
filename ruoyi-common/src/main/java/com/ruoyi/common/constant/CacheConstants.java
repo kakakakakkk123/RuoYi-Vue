@@ -17,6 +17,8 @@ public class CacheConstants
      */
     public static final String CAPTCHA_CODE_KEY = "captcha_codes:";
 
+    public static final String EMAIL_CODE_KEY = "email_codes:";
+
     /**
      * 参数管理 cache key
      */

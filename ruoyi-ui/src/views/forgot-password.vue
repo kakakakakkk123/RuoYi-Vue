@@ -67,6 +67,8 @@ export default {
           this.codeUrl = "data:image/gif;base64," + res.img
           this.form.uuid = res.uuid
         }
+      }).catch(() => {
+        this.$modal.msgError("验证码加载失败，请稍后重试")
       })
     },
     handleSubmit() {

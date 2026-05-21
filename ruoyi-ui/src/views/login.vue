@@ -77,12 +77,8 @@ export default {
         uuid: ""
       },
       loginRules: {
-        username: [
-          { required: true, trigger: "blur", message: "请输入账号" }
-        ],
-        password: [
-          { required: true, trigger: "blur", message: "请输入密码" }
-        ],
+        username: [{ required: true, trigger: "blur", message: "请输入账号" }],
+        password: [{ required: true, trigger: "blur", message: "请输入密码" }],
         code: [{ required: true, trigger: "change", message: "请输入验证码" }]
       },
       loading: false,
@@ -113,6 +109,8 @@ export default {
           this.codeUrl = "data:image/gif;base64," + res.img
           this.loginForm.uuid = res.uuid
         }
+      }).catch(() => {
+        this.$modal.msgError("验证码加载失败，请稍后重试")
       })
     },
     getCookie() {

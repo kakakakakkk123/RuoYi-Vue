@@ -20,7 +20,9 @@ import com.ruoyi.common.exception.user.UserNotExistsException;
 import com.ruoyi.common.exception.user.UserPasswordNotMatchException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.MessageUtils;
+import com.ruoyi.common.utils.ServletUtils;
 import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.common.utils.http.UserAgentUtils;
 import com.ruoyi.common.utils.ip.IpUtils;
 import com.ruoyi.framework.manager.AsyncManager;
 import com.ruoyi.framework.manager.factory.AsyncFactory;
@@ -36,6 +38,8 @@ import com.ruoyi.system.service.ISysUserService;
 @Component
 public class SysLoginService
 {
+    private static final String LOGIN_BLOCKED_USER_AGENT_KEY = "sys.login.blockedUserAgentKeywords";
+
     @Autowired
     private TokenService tokenService;
 
@@ -162,6 +166,8 @@ public class SysLoginService
             AsyncManager.me().execute(AsyncFactory.recordLogininfor(username, Constants.LOGIN_FAIL, MessageUtils.message("login.blocked")));
             throw new BlackListException();
         }
+
+        validateBlockedTerminal(username);
     }
 
     /**
@@ -172,5 +178,29 @@ public class SysLoginService
     public void recordLoginInfo(Long userId)
     {
         userService.updateLoginInfo(userId, IpUtils.getIpAddr(), DateUtils.getNowDate());
+    }
+
+    private void validateBlockedTerminal(String username)
+    {
+        String blockedKeywords = configService.selectConfigByKey(LOGIN_BLOCKED_USER_AGENT_KEY);
+        if (StringUtils.isEmpty(blockedKeywords))
+        {
+            return;
+        }
+
+        String userAgent = StringUtils.defaultString(ServletUtils.getRequest().getHeader("User-Agent"));
+        String browser = UserAgentUtils.getBrowser(userAgent);
+        String os = UserAgentUtils.getOperatingSystem(userAgent);
+        String source = (userAgent + " " + browser + " " + os).toLowerCase();
+        String[] keywords = blockedKeywords.split("[,，;；\\r\\n]+");
+        for (String keyword : keywords)
+        {
+            String current = StringUtils.trim(keyword).toLowerCase();
+            if (StringUtils.isNotEmpty(current) && source.contains(current))
+            {
+                AsyncManager.me().execute(AsyncFactory.recordLogininfor(username, Constants.LOGIN_FAIL, "登录终端已被限制"));
+                throw new ServiceException("当前终端已被限制登录，请联系管理员");
+            }
+        }
     }
 }

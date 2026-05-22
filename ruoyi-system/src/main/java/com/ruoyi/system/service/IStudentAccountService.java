@@ -2,6 +2,7 @@ package com.ruoyi.system.service;
 
 import java.util.List;
 import com.ruoyi.common.core.domain.entity.SysUser;
+import com.ruoyi.common.core.domain.model.AccountSecuritySettings;
 import com.ruoyi.common.core.domain.model.ForgotPasswordBody;
 import com.ruoyi.common.core.domain.model.RegisterBody;
 import com.ruoyi.system.domain.StudentProfile;
@@ -38,6 +39,10 @@ public interface IStudentAccountService
     public boolean studentRegisterEnabled();
 
     public boolean updateStudentRegisterEnabled(boolean enabled, String operName);
+
+    public AccountSecuritySettings selectAccountSecuritySettings();
+
+    public boolean updateAccountSecuritySettings(AccountSecuritySettings settings, String operName);
 
     public String importStudentUsers(List<SysUser> userList, Boolean isUpdateSupport, Boolean disableMissing, String operName);
 }

@@ -17,6 +17,7 @@ import com.ruoyi.common.annotation.Anonymous;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.domain.entity.SysUser;
+import com.ruoyi.common.core.domain.model.AccountSecuritySettings;
 import com.ruoyi.common.core.domain.model.ForgotPasswordBody;
 import com.ruoyi.common.core.domain.model.RegisterBody;
 import com.ruoyi.common.core.page.TableDataInfo;
@@ -70,6 +71,13 @@ public class StudentAccountController extends BaseController
     public AjaxResult registerEnabled()
     {
         return success(studentAccountService.studentRegisterEnabled());
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('teacher,admin')")
+    @GetMapping("/securitySettings")
+    public AjaxResult securitySettings()
+    {
+        return success(studentAccountService.selectAccountSecuritySettings());
     }
 
     @PreAuthorize("@ss.hasAnyRoles('teacher,admin')")
@@ -157,5 +165,12 @@ public class StudentAccountController extends BaseController
     {
         boolean enabled = "0".equals(body.getStatus()) || "true".equalsIgnoreCase(body.getStatus());
         return toAjax(studentAccountService.updateStudentRegisterEnabled(enabled, getUsername()));
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('teacher,admin')")
+    @PutMapping("/securitySettings")
+    public AjaxResult updateSecuritySettings(@Validated @RequestBody AccountSecuritySettings body)
+    {
+        return toAjax(studentAccountService.updateAccountSecuritySettings(body, getUsername()));
     }
 }

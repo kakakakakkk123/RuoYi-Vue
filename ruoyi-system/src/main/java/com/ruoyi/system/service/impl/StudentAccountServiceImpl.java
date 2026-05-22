@@ -14,6 +14,7 @@ import org.springframework.util.CollectionUtils;
 import com.ruoyi.common.constant.UserConstants;
 import com.ruoyi.common.core.domain.entity.SysRole;
 import com.ruoyi.common.core.domain.entity.SysUser;
+import com.ruoyi.common.core.domain.model.AccountSecuritySettings;
 import com.ruoyi.common.core.domain.model.ForgotPasswordBody;
 import com.ruoyi.common.core.domain.model.RegisterBody;
 import com.ruoyi.common.exception.ServiceException;
@@ -39,6 +40,8 @@ public class StudentAccountServiceImpl implements IStudentAccountService
     private static final Logger log = LoggerFactory.getLogger(StudentAccountServiceImpl.class);
     private static final String STUDENT_ROLE_KEY = "student";
     private static final String REGISTER_CONFIG_KEY = "sys.account.registerUser";
+    private static final String LOGIN_BLACK_IP_KEY = "sys.login.blackIPList";
+    private static final String LOGIN_BLOCKED_UA_KEY = "sys.login.blockedUserAgentKeywords";
     private static final String INIT_PASSWORD_KEY = "sys.user.initPassword";
     private static final Long STUDENT_DEFAULT_DEPT_ID = 103L;
 
@@ -301,6 +304,23 @@ public class StudentAccountServiceImpl implements IStudentAccountService
     }
 
     @Override
+    public AccountSecuritySettings selectAccountSecuritySettings()
+    {
+        AccountSecuritySettings settings = new AccountSecuritySettings();
+        settings.setBlackIpList(configValue(LOGIN_BLACK_IP_KEY));
+        settings.setBlockedUserAgentKeywords(configValue(LOGIN_BLOCKED_UA_KEY));
+        return settings;
+    }
+
+    @Override
+    public boolean updateAccountSecuritySettings(AccountSecuritySettings settings, String operName)
+    {
+        boolean updated = upsertConfig(LOGIN_BLACK_IP_KEY, "登录 IP 黑名单", StringUtils.trim(settings.getBlackIpList()), operName);
+        boolean uaUpdated = upsertConfig(LOGIN_BLOCKED_UA_KEY, "登录终端关键字黑名单", StringUtils.trim(settings.getBlockedUserAgentKeywords()), operName);
+        return updated || uaUpdated;
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public String importStudentUsers(List<SysUser> userList, Boolean isUpdateSupport, Boolean disableMissing, String operName)
     {
@@ -494,5 +514,26 @@ public class StudentAccountServiceImpl implements IStudentAccountService
         query.setConfigKey(key);
         List<SysConfig> list = configService.selectConfigList(query);
         return list.isEmpty() ? "" : list.get(0).getConfigValue();
+    }
+
+    private boolean upsertConfig(String key, String name, String value, String operName)
+    {
+        SysConfig query = new SysConfig();
+        query.setConfigKey(key);
+        List<SysConfig> list = configService.selectConfigList(query);
+        if (list.isEmpty())
+        {
+            SysConfig config = new SysConfig();
+            config.setConfigName(name);
+            config.setConfigKey(key);
+            config.setConfigValue(value);
+            config.setConfigType("N");
+            config.setCreateBy(operName);
+            return configService.insertConfig(config) > 0;
+        }
+        SysConfig target = list.get(0);
+        target.setConfigValue(value);
+        target.setUpdateBy(operName);
+        return configService.updateConfig(target) > 0;
     }
 }

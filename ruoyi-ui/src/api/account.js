@@ -69,6 +69,21 @@ export function setRegisterEnabled(status) {
   })
 }
 
+export function getSecuritySettings() {
+  return request({
+    url: '/account/securitySettings',
+    method: 'get'
+  })
+}
+
+export function updateSecuritySettings(data) {
+  return request({
+    url: '/account/securitySettings',
+    method: 'put',
+    data
+  })
+}
+
 export function importStudents(data) {
   return request({
     url: '/account/students/importData',

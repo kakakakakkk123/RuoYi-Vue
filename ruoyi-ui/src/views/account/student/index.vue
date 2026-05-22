@@ -1,6 +1,43 @@
 <template>
   <div class="app-container">
-    <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch">
+    <el-card class="policy-card" shadow="never">
+      <div slot="header" class="policy-header">
+        <span>注册与安全策略</span>
+        <el-button type="text" @click="refreshPolicies">刷新</el-button>
+      </div>
+      <el-form label-width="130px" size="small">
+        <el-form-item label="学生自主注册">
+          <el-switch
+            v-model="registerEnabled"
+            active-text="开放注册"
+            inactive-text="关闭注册"
+            @change="handleRegisterToggle"
+          />
+        </el-form-item>
+        <el-form-item label="登录 IP 黑名单">
+          <el-input
+            v-model="securitySettings.blackIpList"
+            type="textarea"
+            :rows="3"
+            placeholder="支持单个 IP、* 通配符和 IP 段，多个条目可用逗号或换行分隔"
+          />
+        </el-form-item>
+        <el-form-item label="终端关键字黑名单">
+          <el-input
+            v-model="securitySettings.blockedUserAgentKeywords"
+            type="textarea"
+            :rows="3"
+            placeholder="输入浏览器、系统或设备关键字，例如 Android、iPhone、MicroMessenger"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" size="mini" @click="handleSaveSecuritySettings">保存安全策略</el-button>
+          <span class="policy-tip">密码错误锁定仍沿用系统配置：连续输错 5 次后锁定 10 分钟。</span>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <el-form ref="queryForm" :model="queryParams" size="small" :inline="true" v-show="showSearch">
       <el-form-item label="账号" prop="userName">
         <el-input v-model="queryParams.userName" placeholder="请输入账号" clearable @keyup.enter.native="handleQuery" />
       </el-form-item>
@@ -9,7 +46,12 @@
       </el-form-item>
       <el-form-item label="状态" prop="status">
         <el-select v-model="queryParams.status" placeholder="请选择状态" clearable>
-          <el-option v-for="dict in dict.type.sys_normal_disable" :key="dict.value" :label="dict.label" :value="dict.value" />
+          <el-option
+            v-for="dict in dict.type.sys_normal_disable"
+            :key="dict.value"
+            :label="dict.label"
+            :value="dict.value"
+          />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -34,12 +76,6 @@
       <el-col :span="1.5">
         <el-button type="danger" plain size="mini" :disabled="multiple" @click="handleBatchDelete">批量删除</el-button>
       </el-col>
-      <el-col :span="1.5">
-        <el-button type="warning" plain size="mini" @click="refreshRegisterEnabled">刷新注册开关</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-switch v-model="registerEnabled" active-text="开放注册" inactive-text="关闭注册" @change="handleRegisterToggle" />
-      </el-col>
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList" />
     </el-row>
 
@@ -51,7 +87,12 @@
       <el-table-column label="邮箱" prop="email" />
       <el-table-column label="状态" prop="status">
         <template slot-scope="scope">
-          <el-switch v-model="scope.row.status" active-value="0" inactive-value="1" @change="handleStatusChange(scope.row)" />
+          <el-switch
+            v-model="scope.row.status"
+            active-value="0"
+            inactive-value="1"
+            @change="handleStatusChange(scope.row)"
+          />
         </template>
       </el-table-column>
       <el-table-column label="创建时间" prop="createTime" width="170">
@@ -65,7 +106,13 @@
       </el-table-column>
     </el-table>
 
-    <pagination v-show="total > 0" :total="total" :page.sync="queryParams.pageNum" :limit.sync="queryParams.pageSize" @pagination="getList" />
+    <pagination
+      v-show="total > 0"
+      :total="total"
+      :page.sync="queryParams.pageNum"
+      :limit.sync="queryParams.pageSize"
+      @pagination="getList"
+    />
 
     <excel-import-dialog
       ref="importStudentRef"
@@ -82,7 +129,18 @@
 </template>
 
 <script>
-import { listStudents, resetStudentPassword, resetStudentPasswords, changeStudentStatus, changeStudentStatuses, deleteStudents, getRegisterEnabled, setRegisterEnabled } from "@/api/account"
+import {
+  listStudents,
+  resetStudentPassword,
+  resetStudentPasswords,
+  changeStudentStatus,
+  changeStudentStatuses,
+  deleteStudents,
+  getRegisterEnabled,
+  setRegisterEnabled,
+  getSecuritySettings,
+  updateSecuritySettings
+} from "@/api/account"
 import ExcelImportDialog from "@/components/ExcelImportDialog"
 
 export default {
@@ -98,6 +156,10 @@ export default {
       ids: [],
       selectedRows: [],
       registerEnabled: false,
+      securitySettings: {
+        blackIpList: "",
+        blockedUserAgentKeywords: ""
+      },
       queryParams: {
         pageNum: 1,
         pageSize: 10,
@@ -114,7 +176,7 @@ export default {
   },
   created() {
     this.getList()
-    this.refreshRegisterEnabled()
+    this.refreshPolicies()
   },
   methods: {
     getList() {
@@ -136,7 +198,7 @@ export default {
     },
     handleSelectionChange(selection) {
       this.selectedRows = selection
-      this.ids = selection.map(i => i.userId)
+      this.ids = selection.map(item => item.userId)
     },
     handleResetPwd(row) {
       this.$prompt(`请输入 ${row.userName} 的新密码`, "重置密码", { closeOnClickModal: false }).then(({ value }) => {
@@ -157,7 +219,8 @@ export default {
     },
     handleDelete(row) {
       const userIds = row.userId ? [row.userId] : this.ids
-      this.$modal.confirm(`确认删除学号为 ${row.studentNo} 的学生吗？`).then(() => deleteStudents(userIds)).then(() => {
+      const studentText = row.studentNo || "所选学生"
+      this.$modal.confirm(`确认删除 ${studentText} 吗？`).then(() => deleteStudents(userIds)).then(() => {
         this.getList()
         this.$modal.msgSuccess("删除成功")
       }).catch(() => {})
@@ -197,9 +260,15 @@ export default {
     handleImportSuccess() {
       this.getList()
     },
-    refreshRegisterEnabled() {
+    refreshPolicies() {
       getRegisterEnabled().then(res => {
         this.registerEnabled = !!res.data
+      })
+      getSecuritySettings().then(res => {
+        this.securitySettings = res.data || {
+          blackIpList: "",
+          blockedUserAgentKeywords: ""
+        }
       })
     },
     handleRegisterToggle(val) {
@@ -208,7 +277,30 @@ export default {
       }).catch(() => {
         this.registerEnabled = !val
       })
+    },
+    handleSaveSecuritySettings() {
+      updateSecuritySettings(this.securitySettings).then(() => {
+        this.$modal.msgSuccess("安全策略已保存")
+      })
     }
   }
 }
 </script>
+
+<style scoped lang="scss">
+.policy-card {
+  margin-bottom: 16px;
+}
+
+.policy-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.policy-tip {
+  margin-left: 12px;
+  color: #909399;
+  font-size: 12px;
+}
+</style>
